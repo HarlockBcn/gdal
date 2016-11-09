@@ -651,6 +651,7 @@ OGRFeature *OGRDXFLayer::TranslateTEXT()
     double dfZ = 0.0;
     double dfAngle = 0.0;
     double dfHeight = 0.0;
+	CPLString osOwner;
     CPLString osText;
     bool bHaveZ = false;
     int nAnchorPosition = 1;
@@ -695,6 +696,11 @@ OGRFeature *OGRDXFLayer::TranslateTEXT()
             nVerticalAlignment = atoi(szLineBuf);
             break;
 
+		  case 330:
+			  // Soft-pointer ID/handle to owner dictionary (optional)
+			  osOwner = szLineBuf;
+			  break;
+
           default:
             TranslateGenericProperty( poFeature, nCode, szLineBuf );
             break;
@@ -717,6 +723,13 @@ OGRFeature *OGRDXFLayer::TranslateTEXT()
         poGeom = new OGRPoint( dfX, dfY );
     ApplyOCSTransformer( poGeom );
     poFeature->SetGeometryDirectly( poGeom );
+
+/* -------------------------------------------------------------------- */
+/*      ATTRIB owner field												*/
+/* -------------------------------------------------------------------- */
+	if (osOwner != NULL && osOwner != "" && osOwner[osOwner.size() - 1] == '\n')
+		osOwner.resize(osOwner.size() - 1);
+	poFeature->SetField("Owner", osOwner);
 
 /* -------------------------------------------------------------------- */
 /*      Determine anchor position.                                      */
@@ -2309,7 +2322,8 @@ OGRFeature *OGRDXFLayer::GetNextUnfilteredFeature()
             poFeature = TranslateMTEXT();
         }
         else if( EQUAL(szLineBuf,"TEXT")
-                 || EQUAL(szLineBuf,"ATTDEF") )
+                 || EQUAL(szLineBuf,"ATTDEF") 
+				 || EQUAL(szLineBuf, "ATTRIB") )
         {
             poFeature = TranslateTEXT();
         }
