@@ -44,6 +44,15 @@ OGRDXFBlocksLayer::OGRDXFBlocksLayer( OGRDXFDataSource *poDSIn ) :
     poFeatureDefn->Reference();
 
     poDS->AddStandardFields( poFeatureDefn );
+
+	OGRFieldDefn  oNameField("BlockRefName", OFTString);
+	poFeatureDefn->AddFieldDefn(&oNameField);
+
+	OGRFieldDefn  oScaleField("BlockRefScale", OFTRealList);
+	poFeatureDefn->AddFieldDefn(&oScaleField);
+
+	OGRFieldDefn  oBlockAngleField("BlockRefAngle", OFTReal);
+	poFeatureDefn->AddFieldDefn(&oBlockAngleField);
 }
 
 /************************************************************************/
@@ -132,6 +141,25 @@ OGRFeature *OGRDXFBlocksLayer::GetNextUnfilteredFeature()
         poFeature->SetFrom( psBlock->apoFeatures[iNextSubFeature] );
         iNextSubFeature++;
     }
+
+/* -------------------------------------------------------------------- */
+/*      Set Block Reference.                                            */
+/* -------------------------------------------------------------------- */
+	OGRFeature *apoCurrentFeature = psBlock->apoFeatures[iNextSubFeature - 1];
+	// If block entity had BlockName, save it as Block Reference to not loose it
+	if (apoCurrentFeature->GetFieldIndex("BlockName") >= 0) {
+		poFeature->SetField("BlockRefName", apoCurrentFeature->GetFieldAsString("BlockName"));
+	}
+	if (apoCurrentFeature->GetFieldIndex("BlockScale") >= 0) {
+		int nScaleCount;
+		const double *padfScale = apoCurrentFeature->GetFieldAsDoubleList("BlockScale", &nScaleCount);
+		if (nScaleCount > 0) {
+			poFeature->SetField("BlockRefScale", (int)nScaleCount, (double *)padfScale);
+		}
+	}
+	if (apoCurrentFeature->GetFieldIndex("BlockAngle") >= 0) {
+		poFeature->SetField("BlockRefAngle", apoCurrentFeature->GetFieldAsDouble("BlockAngle"));
+	}
 
 /* -------------------------------------------------------------------- */
 /*      Set FID and block name.                                         */
