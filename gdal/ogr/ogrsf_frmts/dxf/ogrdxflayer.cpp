@@ -653,6 +653,8 @@ OGRFeature *OGRDXFLayer::TranslateTEXT()
     double dfHeight = 0.0;
 	CPLString osOwner;
     CPLString osText;
+	// osName: Attribute tab, in case of ATTRIB elems
+	CPLString osName;
     bool bHaveZ = false;
     int nAnchorPosition = 1;
     int nHorizontalAlignment = 0;
@@ -684,6 +686,10 @@ OGRFeature *OGRDXFLayer::TranslateTEXT()
             osText += szLineBuf;
             break;
 
+		  case 2:
+			osName = szLineBuf;
+			break;
+
           case 50:
             dfAngle = CPLAtof(szLineBuf);
             break;
@@ -697,9 +703,9 @@ OGRFeature *OGRDXFLayer::TranslateTEXT()
             break;
 
 		  case 330:
-			  // Soft-pointer ID/handle to owner dictionary (optional)
-			  osOwner = szLineBuf;
-			  break;
+			// Soft-pointer ID/handle to owner dictionary (optional)
+			osOwner = szLineBuf;
+			break;
 
           default:
             TranslateGenericProperty( poFeature, nCode, szLineBuf );
@@ -725,7 +731,7 @@ OGRFeature *OGRDXFLayer::TranslateTEXT()
     poFeature->SetGeometryDirectly( poGeom );
 
 /* -------------------------------------------------------------------- */
-/*      ATTRIB owner field												*/
+/*      ATTRIB owner field												 */
 /* -------------------------------------------------------------------- */
 	if (osOwner != NULL && osOwner != "" && osOwner[osOwner.size() - 1] == '\n')
 		osOwner.resize(osOwner.size() - 1);
@@ -819,6 +825,14 @@ OGRFeature *OGRDXFLayer::TranslateTEXT()
 
     osStyle.Printf("LABEL(f:\"Arial\",t:\"%s\"",osText.c_str());
 
+	// Include Attribute name/tag in case of ATTRIB
+	if (osName != NULL && osName != "")
+	{
+		if (osName[osName.size() - 1] == '\n')
+			osName.resize(osName.size() - 1);
+		osStyle += CPLString().Printf(",n:\"%s\"", osName.c_str());
+	}
+
     osStyle += CPLString().Printf(",p:%d", nAnchorPosition);
 
     if( dfAngle != 0.0 )
@@ -832,7 +846,7 @@ OGRFeature *OGRDXFLayer::TranslateTEXT()
         CPLsnprintf(szBuffer, sizeof(szBuffer), "%.3g", dfHeight);
         osStyle += CPLString().Printf(",s:%sg", szBuffer);
     }
-
+	
     const unsigned char *pabyDWGColors = ACGetColorTable();
 
     snprintf( szBuffer, sizeof(szBuffer), ",c:#%02x%02x%02x",
